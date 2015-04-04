@@ -1,0 +1,71 @@
+
+/* http://paletton.com/#uid=33x0u0kqQ-xgwLilSEty0uJzont */
+
+body {
+  background-color: black;
+  color: #2675B1;
+  font-family: "Lucida Console", Monaco, monospace;
+}
+
+.board-container {
+  margin: 50px;
+}
+
+.board {
+  width: 500px;
+  height: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  border-collapse: collapse;
+}
+
+.board td {
+  width: 33.3%;
+  height: 33.3%;
+  border: 3px solid #2675B1;
+}
+
+td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.superposition table {
+  width: 100%;
+  height: 100%;
+}
+
+.superposition td {
+  border: 0px;
+}
+
+.player-x {
+  color: #FFC929;
+}
+
+.player-o {
+  color: #FF6629;
+}
+
+.classical .mark {
+   font-size: 120px;
+   vertical-align: -20px;
+}
+
+.superposition .mark {
+  font-size: 30px;
+}
+
+.mark {
+  transition: all 100ms cubic-bezier(0.42, 0, 0.58, 1);
+}
+
+.player-x.mark:hover {
+  color: #FFFFFF;
+  text-shadow: 0 0 10px #FFDE7B , 0 0 20px #FFC929 , 0 0 30px #BB8C00;
+}
+
+.player-o.mark:hover {
+  color: #FFFFFF;
+  text-shadow: 0 0 10px #FFA17B , 0 0 20px #FF6629 , 0 0 30px #BB3500;
+}
