@@ -1,7 +1,6 @@
 (ns quantum-ttt.om.game
   "Logic relating to game state")
 
-
 (comment
   ;; Game Data Structures
 
@@ -44,7 +43,7 @@
       ;; Highlight the existing mark at that location
       :else (-> game
               (assoc-in [:board square cell :focus] true)
-              (assoc-in [:board cell square :focus] false)))))
+              (assoc-in [:board cell square :focus] true)))))
 
 (defn uninspect
   "Given a board state, a square and a cell idx, remove ransient
@@ -61,34 +60,43 @@
       (assoc-in [:board square cell :focus] false)
       (assoc-in [:board cell square :focus] false))))
 
+(defn legal-move?
+  "Return true if the move is legal"
+  [game square cell]
+  (let [v (get-in game [:board square cell])]
+    (and (not= square cell) (not (:turn v)))))
+
+(defn other-player
+  [player]
+  (if (= :x player) :o :x))
+
+
+(defn play-spooky
+  "Given a board state, a square and a cell, mark the cell
+   for the current player and return the new game state"
+  [game square cell]
+  (if (legal-move? game square cell)
+    (-> game
+      (update-in [:board square cell] assoc
+        :type :spooky
+        :player (:player game)
+        :turn (:turn game))
+      (update-in [:board cell square] assoc
+        :type :spooky
+        :player (:player game)
+        :turn (:turn game))
+      (update-in [:player] other-player)
+      (update-in [:turn] inc))
+    game))
+
 (def empty-superposition
   (vec (repeat 9 {})))
+
 
 (def new-game
   {:turn 0
    :player :x
    :board (vec (repeat 9 empty-superposition))})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

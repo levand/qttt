@@ -17,24 +17,28 @@
   [{:keys [player turn focus]}]
   (let [icon (if (= :x player) "fa-plus" "fa-circle-o")
         player-class (if (= :x player) "player-x" "player-o")]
-    (dom/span #js {:key (str (name player)  "-" turn)
+    (dom/span #js {:key (str (name player))
                    :className (class-name "mark" "fa" icon player-class (when focus "highlight"))})))
 
 (defn cell
   "Om component for a cell which may be either empty, or a spooky mark"
   [m owner]
-  (let [[cell square] (take 2 (reverse (om/path m)))]
+  (let [[cell square] (take 2 (reverse (om/path m)))
+        game-cursor (om/root-cursor (om/state m))]
     (reify
       om/IRender
       (render [this]
+        (println "rendering..." (empty? m))
         (dom/td #js {:className (if (empty? m) "empty-mark" "spooky-mark")
+                     :onClick (fn [evt]
+                                (om/transact! game-cursor
+                                  #(game/play-spooky % square cell)))
                      :onMouseEnter (fn [evt]
-                                     (om/transact! (om/root-cursor (om/state m))
+                                     (om/transact! game-cursor
                                        #(game/inspect % square cell)))
                      :onMouseLeave (fn [evt]
-                                     (om/transact! (om/root-cursor (om/state m))
+                                     (om/transact! game-cursor
                                        #(game/uninspect % square cell)))}
-
           (css-transition-group #js {:className "ctg" :transitionName "mark-transition"}
             (when-not (empty? m) (mark m))))))))
 
