@@ -57,15 +57,36 @@ td {
 }
 
 .mark {
-  transition: all 100ms cubic-bezier(0.42, 0, 0.58, 1);
+  transition: all 100ms ease;
 }
 
-.player-x.mark:hover {
+.player-x.mark.highlight {
   color: #FFFFFF;
   text-shadow: 0 0 10px #FFDE7B , 0 0 20px #FFC929 , 0 0 30px #BB8C00;
 }
 
-.player-o.mark:hover {
+.player-o.mark.highlight {
   color: #FFFFFF;
   text-shadow: 0 0 10px #FFA17B , 0 0 20px #FF6629 , 0 0 30px #BB3500;
+}
+
+
+/*  React CSS Transitions */
+
+.mark-transition-enter {
+  opacity: 0.01;
+  transition: opacity 100ms ease-in;
+}
+
+.mark-transition-enter.mark-transition-enter-active {
+  opacity: 1;
+}
+
+.mark-transition-leave {
+  opacity: 1;
+  transition: opacity 100ms ease-in;
+}
+
+.mark-transition-leave.mark-transition-leave-active {
+  opacity: 0.01;
 }

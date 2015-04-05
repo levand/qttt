@@ -1,41 +1,42 @@
 (ns quantum-ttt.om
   (:require [om.core :as om]
-            [om.dom :as dom]))
+            [om.dom :as dom]
+            [quantum-ttt.om.game :as game]))
 
 (enable-console-print!)
 
-(defn empty-qbit [_ owner]
-  (reify
-    om/IRender
-    (render [this]
-      (dom/div #js {:className "empty-qbit"}))))
-
-
-(defn played-qbit [[player turn] owner]
-  (reify
-    om/IRender
-    (render [this]
-      (dom/div #js {:className "qbit"}
-        (dom/span #js {:className "player"} (name player))
-        #_(dom/span #js {:className "turn"} turn)))))
-
-
-(defn qbit [play owner]
-  (if (nil? play)
-    (empty-qbit play owner)
-    (played-qbit play owner)))
+(def css-transition-group (js/React.createFactory js/React.addons.CSSTransitionGroup))
 
 (defn class-name
-  "Return a class name string given multiple CSS classes"
+  "Return a class name string given multiple CSS classes. Nil classes are filtered out."
   [& classes]
-  (apply str (interpose " " classes)))
+  (apply str (interpose " " (filter identity classes))))
 
 (defn mark
   "Return a Om DOM node for a player's mark"
-  [{:keys [player turn]}]
+  [{:keys [player turn focus]}]
   (let [icon (if (= :x player) "fa-plus" "fa-circle-o")
         player-class (if (= :x player) "player-x" "player-o")]
-    (dom/span #js {:className (class-name "mark" "fa" icon player-class)})))
+    (dom/span #js {:key (str (name player)  "-" turn)
+                   :className (class-name "mark" "fa" icon player-class (when focus "highlight"))})))
+
+(defn cell
+  "Om component for a cell which may be either empty, or a spooky mark"
+  [m owner]
+  (let [[cell square] (take 2 (reverse (om/path m)))]
+    (reify
+      om/IRender
+      (render [this]
+        (dom/td #js {:className (if (empty? m) "empty-mark" "spooky-mark")
+                     :onMouseEnter (fn [evt]
+                                     (om/transact! (om/root-cursor (om/state m))
+                                       #(game/inspect % square cell)))
+                     :onMouseLeave (fn [evt]
+                                     (om/transact! (om/root-cursor (om/state m))
+                                       #(game/uninspect % square cell)))}
+
+          (css-transition-group #js {:className "ctg" :transitionName "mark-transition"}
+            (when-not (empty? m) (mark m))))))))
 
 (defn superposition
   "Om component for a quantum marked square"
@@ -47,10 +48,8 @@
         (apply dom/table nil
           (map (fn [row]
                  (apply dom/tr nil
-                   (map (fn [spooky-mark]
-                          (if spooky-mark
-                            (dom/td #js {:className "spooky-mark"} (mark spooky-mark))
-                            (dom/td #js {:className "empty-mark"})))
+                   (map (fn [m]
+                          (om/build cell m))
                      row)))
             (partition 3 sq)))))))
 
@@ -66,9 +65,9 @@
 (defn square
   "Om component for a square"
   [sq owner]
-  (if (sequential? sq)
-    (superposition sq owner)
-    (classical sq owner)))
+  (if (= :classical (:type sq))
+    (classical sq owner)
+    (superposition sq owner)))
 
 (defn board [squares owner]
   (reify
@@ -89,29 +88,10 @@
           (om/build board (:board game))))))
 
 
-(defn sample-superposition []
-  (repeatedly 9
-    (fn []
-      (if (zero? (rand-int 4))
-        {:player (if (zero? (rand-int 2)) :x :o)
-         :turn (rand-int 9)}
-        nil))))
-
-(defn sample-square []
-  (if (zero? (rand-int 3))
-    {:player (if (zero? (rand-int 2)) :x :o)
-     :turn (rand-int 9)}
-    (sample-superposition)))
-
-
-(defn sample-board []
-  (repeatedly 9 sample-square))
-
 (defn ^:export main
   []
-  (let [app-state (atom {:turn 0
-                         :board (sample-board)})]
+  (let [game-state (atom game/new-game)]
     (om/root
       screen
-      app-state
+      game-state
       {:target (. js/document (getElementById "root"))})))
