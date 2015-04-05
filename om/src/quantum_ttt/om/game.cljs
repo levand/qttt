@@ -5,12 +5,11 @@
   ;; Game Data Structures
 
   ;; A mark
-  {:type :spooky      ; or :classical
+  {:type :spooky      ; or :classical, or :transient
    :player :x         ; owner of the mark
    :focus true        ; Visually highlight the mark
                       ; hasn't been actually placed yet
-   :turn 4            ; Turn when the mark was placed. Nil or absent
-                      ; if the mark is speculative (has not actually been played).
+   :turn 4            ; Turn when the mark was placed.
    }
 
   ;; A game
@@ -34,11 +33,13 @@
       (= square cell) game
       ;; Make two transient spooky marks
       (empty? contents) (-> game
-                          (assoc-in [:board square cell] {:type :spooky
+                          (assoc-in [:board square cell] {:type :transient
                                                           :player (:player game)
+                                                          :turn (:turn game)
                                                           :focus true})
-                          (assoc-in [:board cell square]  {:type :spooky
+                          (assoc-in [:board cell square]  {:type :transient
                                                            :player (:player game)
+                                                           :turn (:turn game)
                                                            :focus true}))
       ;; Highlight the existing mark at that location
       :else (-> game
@@ -50,12 +51,10 @@
    marks and/or focus from the cell and its entangled pair,
    returning a new game state"
   [game square cell]
-  (if (nil? (get-in game [:board square cell :turn]))
-    ;; It was a transient mark
+  (if (= :transient (get-in game [:board square cell :type]))
     (-> game
       (assoc-in [:board square cell] {})
       (assoc-in [:board cell square] {}))
-    ;; It was a focused existing mark
     (-> game
       (assoc-in [:board square cell :focus] false)
       (assoc-in [:board cell square :focus] false))))
@@ -64,7 +63,8 @@
   "Return true if the move is legal"
   [game square cell]
   (let [v (get-in game [:board square cell])]
-    (and (not= square cell) (not (:turn v)))))
+    (and (not= square cell) (or (empty? v)
+                              (= :transient (:type v))))))
 
 (defn other-player
   [player]

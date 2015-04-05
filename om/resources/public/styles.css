@@ -52,12 +52,16 @@ td {
    vertical-align: -20px;
 }
 
-.superposition .mark {
-  font-size: 30px;
-}
-
 .mark {
   transition: all 100ms ease;
+}
+
+.mark .turn {
+  font-size: 40%;
+}
+
+.superposition .mark {
+  font-size: 30px;
 }
 
 .player-x.mark.highlight {

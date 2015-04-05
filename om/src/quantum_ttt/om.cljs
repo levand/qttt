@@ -17,8 +17,10 @@
   [{:keys [player turn focus]}]
   (let [icon (if (= :x player) "fa-plus" "fa-circle-o")
         player-class (if (= :x player) "player-x" "player-o")]
-    (dom/span #js {:key (str (name player))
-                   :className (class-name "mark" "fa" icon player-class (when focus "highlight"))})))
+    (dom/span #js {:key (name player)
+                   :className (class-name "mark" player-class (when focus "highlight"))}
+      (dom/span #js {:className (class-name "fa" icon)})
+      (dom/span #js {:className "turn"} turn))))
 
 (defn cell
   "Om component for a cell which may be either empty, or a spooky mark"
@@ -28,7 +30,6 @@
     (reify
       om/IRender
       (render [this]
-        (println "rendering..." (empty? m))
         (dom/td #js {:className (if (empty? m) "empty-mark" "spooky-mark")
                      :onClick (fn [evt]
                                 (om/transact! game-cursor
