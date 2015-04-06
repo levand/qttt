@@ -15,37 +15,38 @@
 (defn mark
   "Return a Om DOM node for a player's mark"
   [{:keys [player turn focus]}]
-  (let [icon (if (= :x player) "fa-plus" "fa-circle-o")
-        player-class (if (= :x player) "player-x" "player-o")]
+  (let [icon (if (= 0 player) "fa-plus" "fa-circle-o")
+        player-class (if (= 0 player) "player-x" "player-o")]
     (dom/span #js {:key (str player)
                    :className (class-name "mark" player-class (when focus "highlight"))}
       (dom/span #js {:className (class-name "fa" icon)})
       (dom/span #js {:className "turn"} turn))))
 
-(defn cell
-  "Om component for a cell which may be either empty, or a spooky mark"
-  [m owner]
-  (let [[cell square] (take 2 (reverse (om/path m)))
-        game-cursor (om/root-cursor (om/state m))]
+
+(defn entanglement
+  "Om component for an individual entanglement"
+  [e owner]
+  (let [[_ cid-1 _ cid-2] (om/path e)
+        game-cursor (om/root-cursor (om/state e))]
     (reify
       om/IRender
       (render [this]
-        (dom/td #js {:className (if (empty? m) "empty-mark" "spooky-mark")
+        (dom/td #js {:className (if (empty? e) "empty-mark" "spooky-mark")
                      :onClick (fn [evt]
                                 (om/transact! game-cursor
-                                  #(game/play-spooky % square cell)))
+                                  #(game/play % cid-1 cid-2)))
                      :onMouseEnter (fn [evt]
                                      (om/transact! game-cursor
-                                       #(game/inspect % square cell)))
+                                       #(game/speculate % cid-1 cid-2)))
                      :onMouseLeave (fn [evt]
                                      (om/transact! game-cursor
-                                       #(game/uninspect % square cell)))}
-          (css-transition-group #js {:className "ctg" :transitionName "mark-transition"}
-            (when-not (empty? m) (mark m))))))))
+                                       #(game/unspeculate % cid-1 cid-2)))}
+          (css-transition-group #js {:transitionName "mark-transition"}
+            (when-not (empty? e) (mark e))))))))
 
 (defn superposition
-  "Om component for a quantum marked square"
-  [sq owner]
+  "Om component for a quantum cell"
+  [cell owner]
   (reify
     om/IRender
     (render [this]
@@ -53,37 +54,41 @@
         (apply dom/table nil
           (map (fn [row]
                  (apply dom/tr nil
-                   (map (fn [m]
-                          (om/build cell m))
+                   (map (fn [idx]
+                          ;; Make sure were have a valid cursor
+                          (let [e (get-in cell [:entanglements idx]
+                                    (get-in (assoc-in cell [:entanglements idx] {})
+                                      [:entanglements idx]))]
+                            (om/build entanglement e)))
                      row)))
-            (partition 3 sq)))))))
+            (partition 3 (range 9))))))))
 
 (defn classical
-  "Om component for a classically marked square"
-  [sq owner]
+  "Om component for a classical cell"
+  [cell owner]
   (reify
     om/IRender
     (render [this]
       (dom/td #js {:className "classical"}
-        (mark sq)))))
+        (mark cell)))))
 
-(defn square
+(defn cell
   "Om component for a square"
-  [sq owner]
-  (if (= :classical (:type sq))
-    (classical sq owner)
-    (superposition sq owner)))
+  [cell owner]
+  (if (:classical cell)
+    (classical cell owner)
+    (superposition cell owner)))
 
-(defn board [squares owner]
+(defn board [cells owner]
   (reify
     om/IRender
     (render [this]
       (dom/div #js {:className "board-container"}
         (apply dom/table #js {:className "board"}
-                  (map (fn [row]
-                         (apply dom/tr nil
-                           (map #(om/build square %) row)))
-                    (partition 3 squares)))))))
+          (map (fn [row]
+                 (apply dom/tr nil
+                   (map (fn [idx] (om/build cell (get cells idx))) row)))
+            (partition 3 (range 9))))))))
 
 (defn screen [game owner]
   (reify

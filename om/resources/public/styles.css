@@ -79,7 +79,7 @@ td {
 
 .mark-transition-enter {
   opacity: 0.01;
-  transition: opacity 100ms ease-in;
+  transition: opacity 70ms ease-in;
 }
 
 .mark-transition-enter.mark-transition-enter-active {
@@ -88,7 +88,7 @@ td {
 
 .mark-transition-leave {
   opacity: 1;
-  transition: opacity 100ms ease-in;
+  transition: opacity 70ms ease-out;
 }
 
 .mark-transition-leave.mark-transition-leave-active {

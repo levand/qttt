@@ -2,63 +2,34 @@
   "Logic relating to game state"
   (:require [clojure.set :as set]))
 
+(def num-cells 9)
+(def num-players 2)
+
 (comment
   ;; Game Data Structures
 
-  ;; A mark
-  {:type :spooky      ; or :classical, or :transient
-   :player :x         ; owner of the mark
-   :focus true        ; Visually highlight the mark
-                      ; hasn't been actually placed yet
-   :turn 4            ; Turn when the mark was placed.
-   }
+  ;; Game
+  {:turn   0
+   :player 0
+   :board  board}
 
-  ;; A game
-  {:turn 0            ; the current turn
-   :player :x         ; who plays next
-   :collapse?  false  ; true iff the player must resolve a state collapse
-                      ; before playing a normal turn.
-   :board  [...]      ; vector of 9 squares
-   }
+  ;; The board
+  {0 cell
+   1 cell}
 
-  ;; A square = a vector of 9 (empty mark|spooky mark), or one classical mark
-  )
-
-(defn inspect
-  "Given a board state, a square and a cell idx, return a new game state
-   reflecting the fact that the user is inspecting that square."
-  [game square cell]
-  (let [contents (get-in game [:board square cell])]
-    (cond
-      ;; No-op, can't select same square
-      (= square cell) game
-      ;; Make two transient spooky marks
-      (empty? contents) (-> game
-                          (assoc-in [:board square cell] {:type :transient
-                                                          :player (:player game)
-                                                          :turn (:turn game)
-                                                          :focus true})
-                          (assoc-in [:board cell square]  {:type :transient
-                                                           :player (:player game)
-                                                           :turn (:turn game)
-                                                           :focus true}))
-      ;; Highlight the existing mark at that location
-      :else (-> game
-              (assoc-in [:board square cell :focus] true)
-              (assoc-in [:board cell square :focus] true)))))
-
-(defn uninspect
-  "Given a board state, a square and a cell idx, remove ransient
-   marks and/or focus from the cell and its entangled pair,
-   returning a new game state"
-  [game square cell]
-  (if (= :transient (get-in game [:board square cell :type] :transient))
-    (-> game
-      (assoc-in [:board square cell] {})
-      (assoc-in [:board cell square] {}))
-    (-> game
-      (assoc-in [:board square cell :focus] false)
-      (assoc-in [:board cell square :focus] false))))
+   ;; A cell
+  {:entanglements {0 {:player 0
+                      :turn 0
+                      :focus false
+                      :speculative false}
+                   1 {:player 1
+                      :turn 1
+                      :focus true
+                      :speculative true}}
+   :classical {:player 0
+               :turn 0
+               :speculative true}
+   :collapsing false})
 
 (defn index-of
   "Return the index of an item in a vector, if present. If not present return nil"
@@ -66,6 +37,14 @@
   (first (keep-indexed (fn [i val]
                          (when (= val item) i))
            v)))
+
+(defn get-entanglements
+  "Gets the entanglement ids of a cell, disregarding speculative ones"
+  [cell]
+  (set (map (fn [[k v]]
+              (when-not (:speculative v)
+                k))
+         (:entanglements cell))))
 
 (defn cycle-search
   "Generic depth-first search, tracking visited nodes.
@@ -78,93 +57,104 @@
                    (cycle-search edge edges (conj visited node) node)))
          (disj (set (edges node)) prev))))
 
-
 (defn detect-cycles
   "Return a sequence of all entanglement cycles present in the given board"
   [board]
-  (let [edges (fn [node]
-                (filter #(= :spooky (get-in board [node % :type]))
-                  (range (count board))))]
+  (let [edges (fn [cell-id]
+                (get-entanglements (board cell-id)))]
     ;; Not 100% efficient, but we need some way of detecting multiple disjoint graphs.
     ;; Should be fine for small N. Using sets removes redundancies. If we run into perf
     ;; trouble we can track which nodes we've visited *at all* and never revisit them.
-    (apply set/union (map #(cycle-search % edges [] nil)
-                       (range (count board))))))
+    (apply set/union (map #(cycle-search % edges [] nil) (keys board)))))
 
-(defn maybe-collapse
-  "Given a game, if there are any cycles, replace them with
-   collapsing squares and switch the player accordingly,
-   returning the new game."
+(defn check-collapses
+  "Given a game, if there are any cycles, mark the involved cells as collapsing."
   [game]
   (let [cycles (detect-cycles (:board game))]
     (if (empty? cycles)
       game
       (do
-        (println "FOUND CYCLES: " (str cycles))
+        (println "FOUND CYCLES: " cycles)
         game))))
 
-(defn legal-mark?
-  "Return true if the move is legal"
-  [game square cell]
-  (let [v (get-in game [:board square cell])]
-    (and (not= square cell) (or (empty? v)
-                              (= :transient (:type v))))))
+(defn legal-play?
+  "Return true if the move is legal. That is:
 
-(defn other-player
+  - This or any other cells may not be collapsing (that needs to be resolved first)
+  - They must not be the same cell
+  - They must not already be entangled
+  - Neither cell must be classical"
+  [game cid-1 cid-2]
+  (let [c-1 (get-in game [:board cid-1])
+        c-2 (get-in game [:board cid-2])]
+    (not (or
+           (= cid-1 cid-2)
+           (:classical c-1)
+           (:classical c-2)
+           (some :collapsing (vals (:board game)))))))
+
+(defn next-player
   [player]
-  (if (= :x player) :o :x))
+  (mod (inc player) num-players))
 
-(defn play-spooky
-  "Given a board state, a square and a cell, mark the cell
-   for the current player and return the new game state"
-  [game square cell]
-  (if (legal-mark? game square cell)
+(defn play
+  "Given a board state and two cell ids, mark the cells
+   as entangled with a play by the current player, and return
+   the new game state."
+  [game cid-1 cid-2]
+  (if (legal-play? game cid-1 cid-2)
     (-> game
-      (update-in [:board square cell] assoc
-        :type :spooky
+      (update-in [:board cid-1 :entanglements cid-2] assoc
         :player (:player game)
+        :speculative false
         :turn (:turn game))
-      (update-in [:board cell square] assoc
-        :type :spooky
+      (update-in [:board cid-2 :entanglements cid-1] assoc
         :player (:player game)
+        :speculative false
         :turn (:turn game))
-      (update-in [:player] other-player)
+      (update-in [:player] next-player)
       (update-in [:turn] inc)
-      (maybe-collapse))
+      (check-collapses))
     game))
 
+(defn speculate
+  "Given a board state and two cells, return a new game state
+   reflecting the fact that the user is speculating the superposition
+   between those cells"
+  [game cid-1 cid-2]
+  (if (legal-play? game cid-1 cid-2)
+    (let [inspect* (fn [entanglements cid]
+                     (if (get entanglements cid)
+                       (assoc-in entanglements [cid :focus] true)
+                       (assoc entanglements cid {:player (:player game)
+                                                 :turn (:turn game)
+                                                 :focus true
+                                                 :speculative true})))]
+      (-> game
+        (update-in [:board cid-1 :entanglements] #(inspect* % cid-2))
+        (update-in [:board cid-2 :entanglements] #(inspect* % cid-1))))
+    game))
 
-(def empty-superposition
-  (vec (repeat 9 {})))
+(defn unspeculate
+  "Given a game and two cells, remove speculative entanglements
+   and/or focus from both cells, returning a new game."
+  [game cid-1 cid-2]
+  (let [uninspect* (fn [entanglements cid]
+                     (if (get-in entanglements [cid :speculative])
+                       (dissoc entanglements cid)
+                       (if (get entanglements cid)
+                         (assoc-in entanglements [cid :focus] false)
+                         entanglements)))]
+    (-> game
+          (update-in [:board cid-1 :entanglements] #(uninspect* % cid-2))
+          (update-in [:board cid-2 :entanglements] #(uninspect* % cid-1)))))
+
+
+
 
 (def new-game
   {:turn 0
-   :player :x
-   :board (vec (repeat 9 empty-superposition))})
-
-
-
-
-(comment
-
-  (defn sample-superposition []
-    (vec (repeatedly 9
-           (fn []
-             (if (zero? (rand-int 4))
-               {:player (if (zero? (rand-int 2)) :x :o)
-                :placed (rand-int 9)}
-               nil)))))
-
-  (defn sample-square []
-    (if (zero? (rand-int 3))
-      {:player (if (zero? (rand-int 2)) :x :o)
-       :placed (rand-int 9)}
-      (sample-superposition)))
-
-  (defn sample-board []
-    (vec (repeatedly 9 sample-square)))
-
-  (defn sample-game []
-    {:turn 0
-     :board (sample-board)}))
+   :player 0
+   :board (zipmap (range num-cells)
+                  (repeat {:entanglements {}}))})
 
