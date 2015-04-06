@@ -1,5 +1,6 @@
 (ns quantum-ttt.om.game
-  "Logic relating to game state")
+  "Logic relating to game state"
+  (:require [clojure.set :as set]))
 
 (comment
   ;; Game Data Structures
@@ -51,7 +52,7 @@
    marks and/or focus from the cell and its entangled pair,
    returning a new game state"
   [game square cell]
-  (if (= :transient (get-in game [:board square cell :type]))
+  (if (= :transient (get-in game [:board square cell :type] :transient))
     (-> game
       (assoc-in [:board square cell] {})
       (assoc-in [:board cell square] {}))
@@ -59,7 +60,50 @@
       (assoc-in [:board square cell :focus] false)
       (assoc-in [:board cell square :focus] false))))
 
-(defn legal-move?
+(defn index-of
+  "Return the index of an item in a vector, if present. If not present return nil"
+  [v item]
+  (first (keep-indexed (fn [i val]
+                         (when (= val item) i))
+           v)))
+
+(defn cycle-search
+  "Generic depth-first search, tracking visited nodes.
+
+   Return a seq of cycles discovered."
+  [node edges visited prev]
+  (set (mapcat (fn [edge]
+                 (if-let [idx (index-of visited edge)]
+                   [(set (conj (subvec visited idx) node))]
+                   (cycle-search edge edges (conj visited node) node)))
+         (disj (set (edges node)) prev))))
+
+
+(defn detect-cycles
+  "Return a sequence of all entanglement cycles present in the given board"
+  [board]
+  (let [edges (fn [node]
+                (filter #(= :spooky (get-in board [node % :type]))
+                  (range (count board))))]
+    ;; Not 100% efficient, but we need some way of detecting multiple disjoint graphs.
+    ;; Should be fine for small N. Using sets removes redundancies. If we run into perf
+    ;; trouble we can track which nodes we've visited *at all* and never revisit them.
+    (apply set/union (map #(cycle-search % edges [] nil)
+                       (range (count board))))))
+
+(defn maybe-collapse
+  "Given a game, if there are any cycles, replace them with
+   collapsing squares and switch the player accordingly,
+   returning the new game."
+  [game]
+  (let [cycles (detect-cycles (:board game))]
+    (if (empty? cycles)
+      game
+      (do
+        (println "FOUND CYCLES: " (str cycles))
+        game))))
+
+(defn legal-mark?
   "Return true if the move is legal"
   [game square cell]
   (let [v (get-in game [:board square cell])]
@@ -70,12 +114,11 @@
   [player]
   (if (= :x player) :o :x))
 
-
 (defn play-spooky
   "Given a board state, a square and a cell, mark the cell
    for the current player and return the new game state"
   [game square cell]
-  (if (legal-move? game square cell)
+  (if (legal-mark? game square cell)
     (-> game
       (update-in [:board square cell] assoc
         :type :spooky
@@ -86,12 +129,13 @@
         :player (:player game)
         :turn (:turn game))
       (update-in [:player] other-player)
-      (update-in [:turn] inc))
+      (update-in [:turn] inc)
+      (maybe-collapse))
     game))
+
 
 (def empty-superposition
   (vec (repeat 9 {})))
-
 
 (def new-game
   {:turn 0

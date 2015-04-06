@@ -17,7 +17,7 @@
   [{:keys [player turn focus]}]
   (let [icon (if (= :x player) "fa-plus" "fa-circle-o")
         player-class (if (= :x player) "player-x" "player-o")]
-    (dom/span #js {:key (name player)
+    (dom/span #js {:key (str player)
                    :className (class-name "mark" player-class (when focus "highlight"))}
       (dom/span #js {:className (class-name "fa" icon)})
       (dom/span #js {:className "turn"} turn))))
