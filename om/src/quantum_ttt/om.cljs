@@ -18,10 +18,9 @@
   (let [icon (if (= 0 player) "fa-plus" "fa-circle-o")
         player-class (if (= 0 player) "player-x" "player-o")]
     (dom/span #js {:key (str player)
-                   :className (class-name "mark" player-class (when focus "highlight"))}
+                   :className (class-name "mark" "shake" "shake-constant" player-class (when focus "highlight"))}
       (dom/span #js {:className (class-name "fa" icon)})
       (dom/span #js {:className "turn"} turn))))
-
 
 (defn entanglement
   "Om component for an individual entanglement"
@@ -50,7 +49,8 @@
   (reify
     om/IRender
     (render [this]
-      (dom/td #js {:className "superposition"}
+      (dom/td #js {:className (class-name "superposition"
+                                (when (:collapsing cell) "collapsing"))}
         (apply dom/table nil
           (map (fn [row]
                  (apply dom/tr nil

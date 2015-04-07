@@ -46,6 +46,18 @@
                 k))
          (:entanglements cell))))
 
+(defn all-entanglements
+  "Returns a set of all cell ids entangled with any of the given cell ids.
+
+  Includes the given IDs."
+  [game cell-ids]
+  (loop [cids cell-ids]
+    (let [cells (set (map #(get-in game [:board %]) cell-ids))
+          neighbors (apply set/union (map get-entanglements cells))]
+      (if (= cids neighbors)
+        neighbors
+        (recur neighbors)))))
+
 (defn cycle-search
   "Generic depth-first search, tracking visited nodes.
 
@@ -68,14 +80,15 @@
     (apply set/union (map #(cycle-search % edges [] nil) (keys board)))))
 
 (defn check-collapses
-  "Given a game, if there are any cycles, mark the involved cells as collapsing."
+  "Given a game, if there are any cycles, mark all cells involved in a cycle,
+   and all entangled cells, as collapsing."
   [game]
   (let [cycles (detect-cycles (:board game))]
     (if (empty? cycles)
       game
-      (do
-        (println "FOUND CYCLES: " cycles)
-        game))))
+      (reduce (fn [g cell]
+                (assoc-in g [:board cell :collapsing] true))
+        game (all-entanglements game (apply set/union cycles))))))
 
 (defn legal-play?
   "Return true if the move is legal. That is:
@@ -157,4 +170,3 @@
    :player 0
    :board (zipmap (range num-cells)
                   (repeat {:entanglements {}}))})
-
