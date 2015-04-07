@@ -52,7 +52,7 @@
   Includes the given IDs."
   [game cell-ids]
   (loop [cids cell-ids]
-    (let [cells (set (map #(get-in game [:board %]) cell-ids))
+    (let [cells (set (map #(get-in game [:board %]) cids))
           neighbors (apply set/union (map get-entanglements cells))]
       (if (= cids neighbors)
         neighbors
