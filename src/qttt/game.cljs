@@ -1,4 +1,4 @@
-(ns quantum-ttt.om.game
+(ns qttt.game
   "Logic relating to game state"
   (:require [clojure.set :as set]))
 
@@ -226,7 +226,6 @@
   "Given a board state and two cells, return a new game
    state speculating a play to the given cells."
   [game cid-1 cid-2]
-  (println "Attempting speculating..." (:collapsing game))
   (if (:collapsing game)
     (collapse game cid-1 cid-2 true)
     (speculate-superposition game cid-1 cid-2)))

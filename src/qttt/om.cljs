@@ -1,7 +1,7 @@
-(ns quantum-ttt.om
+(ns qttt.om
   (:require [om.core :as om]
             [om.dom :as dom]
-            [quantum-ttt.om.game :as game]))
+            [qttt.game :as game]))
 
 (enable-console-print!)
 
