@@ -14,11 +14,12 @@
 
 (defn mark
   "Return a Om DOM node for a player's mark"
-  [{:keys [player turn focus]}]
+  [{:keys [player turn focus collapsing]}]
   (let [icon (if (= 0 player) "fa-plus" "fa-circle-o")
         player-class (if (= 0 player) "player-x" "player-o")]
     (dom/span #js {:key (str player)
-                   :className (class-name "mark" "shake" "shake-constant" player-class (when focus "highlight"))}
+                   :className (class-name "mark" player-class (when focus "highlight")
+                                (when collapsing "shake") (when collapsing "shake-constant"))}
       (dom/span #js {:className (class-name "fa" icon)})
       (dom/span #js {:className "turn"} turn))))
 
@@ -30,7 +31,7 @@
     (reify
       om/IRender
       (render [this]
-        (dom/td #js {:className (if (empty? e) "empty-mark" "spooky-mark")
+        (dom/td #js {:className (class-name (if (empty? e) "empty-mark" "spooky-mark"))
                      :onClick (fn [evt]
                                 (om/transact! game-cursor
                                   #(game/play % cid-1 cid-2)))
@@ -49,8 +50,7 @@
   (reify
     om/IRender
     (render [this]
-      (dom/td #js {:className (class-name "superposition"
-                                (when (:collapsing cell) "collapsing"))}
+      (dom/td #js {:className (class-name "superposition")}
         (apply dom/table nil
           (map (fn [row]
                  (apply dom/tr nil
@@ -66,7 +66,6 @@
 (defn classical
   "Om component for a classical cell"
   [cell owner]
-  (println "rendering classical:" cell)
   (reify
     om/IRender
     (render [this]
