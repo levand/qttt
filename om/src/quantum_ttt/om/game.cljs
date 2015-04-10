@@ -90,10 +90,9 @@
                 (assoc-in g [:board cell :collapsing] true))
         game (all-entanglements game (apply set/union cycles))))))
 
-(defn legal-play?
-  "Return true if the move is legal. That is:
+(defn legal-superposition?
+  "Return true if the move is a legal superposition play. That is:
 
-  - This or any other cells may not be collapsing (that needs to be resolved first)
   - They must not be the same cell
   - They must not already be entangled
   - Neither cell must be classical"
@@ -103,19 +102,18 @@
     (not (or
            (= cid-1 cid-2)
            (:classical c-1)
-           (:classical c-2)
-           (some :collapsing (vals (:board game)))))))
+           (:classical c-2)))))
 
 (defn next-player
   [player]
   (mod (inc player) num-players))
 
 (defn play
-  "Given a board state and two cell ids, mark the cells
+  "Given a board state and two cell ids, make a play. Mark the cells
    as entangled with a play by the current player, and return
    the new game state."
   [game cid-1 cid-2]
-  (if (legal-play? game cid-1 cid-2)
+  (if (legal-superposition? game cid-1 cid-2)
     (-> game
       (update-in [:board cid-1 :entanglements cid-2] assoc
         :player (:player game)
@@ -130,12 +128,15 @@
       (check-collapses))
     game))
 
-(defn speculate
-  "Given a board state and two cells, return a new game state
-   reflecting the fact that the user is speculating the superposition
-   between those cells"
+(defn collapsing?
+  "Return true if the given game has collapsing cells"
+  [game]
+  (some :collapsing (vals (:board game))))
+
+(defn speculate-superposition
+  "Speculate a play placing a superposition"
   [game cid-1 cid-2]
-  (if (legal-play? game cid-1 cid-2)
+  (if (legal-superposition? game cid-1 cid-2)
     (let [inspect* (fn [entanglements cid]
                      (if (get entanglements cid)
                        (assoc-in entanglements [cid :focus] true)
@@ -148,21 +149,128 @@
         (update-in [:board cid-2 :entanglements] #(inspect* % cid-1))))
     game))
 
+(defn legal-collapse?
+  "Return true if the move is a legal collapsing play. That is, the cell and the target cell
+   are both collapsing."
+  [game cid-1 cid-2]
+  (let [c-1 (get-in game [:board cid-1])
+        c-2 (get-in game [:board cid-2])]
+    (and (:collapsing c-1) (:collapsing c-2))))
+
+;; MAJOR PROBLEM: is my understanding of the game correct? Consider:
+
+; A - B (o)
+; B - C (x)
+; C - A (o)
+; A - D (x)
+
+; Take observation [A D] (x). This implies, [B A] (o) [C A] (o). But this cannot be. B-C simply disappears in this
+; scenario, although one of them must work.
+
+;; One reference implemenation resolves the issue by only allowing you to resolve "within" the cycle. Ramifications
+;; may proceed down branches, but you can only select from the original cycle.
+
+;; Is this true? I *think* so.
+
+;; when [A B] (o) -> [B C] (x) -> [C A] (o)
+;;                -> [D A] (x)
+
+;; Solution: read the original paper. See what it says.
+
+;; Implications for me:
+
+;; 1. Only vibrate the cycle (only nodes within the cycle are collapsing) (moderate). The only tricky part is not vibrating entanglements that point to outside the cycle.
+;; 2. Only allow selection of nodes within the cycle for the resolution phase (easy).
+;; 3. DO propagate effects of resolution to branches (easy).
+;;
+;; Should work! This will also prevent "evaporation" of branches outside the cycle, where a node may be rejected but
+;; have no alternative for accepting.
+
+(defn observe
+  "Define an observation as a tuple of [accepted-cell-id rejected-cell-id], where the accepted cell is the cell that the
+  value is observed collapsing 'into' and the rejected cell is the (formely) entangled cell that is being collapsed
+  'out' of.
+
+  Given an observation, return a set of observations implied based on the accepted cell's entanglements."
+  [board [accepted-cid rejected-cid]]
+  (println "observing...")
+  (let [cell (board accepted-cid)
+        entangled-cids (disj (get-entanglements cell) rejected-cid)
+        _ (println "entangled: " entangled-cids)
+        implied (set (map (fn [accept]
+                            [accept accepted-cid])
+                       entangled-cids))]
+    implied))
+
+(defn observe-all
+  "Given a set of observations, recursively calculate *all* observations inferred from entangled cells"
+  [board observations]
+  (loop [os observations]
+    (let [next-os (apply set/union os (map #(observe board %) os))]
+      (if (= next-os os)
+        next-os
+        (recur next-os)))))
+
+(defn speculate-collapse
+  "Speculate a play resolving a collapse"
+  [game cid-1 cid-2]
+  (if (legal-collapse? game cid-1 cid-2)
+    (if-let [spooky (get-in game [:board cid-1 :entanglements cid-2])]
+      (do
+        (println "collapse:" (observe-all (:board game) #{[cid-1 cid-2]}))
+        (-> game
+          (assoc-in [:board cid-1 :entanglements cid-2 :focus] true)
+          #_(assoc-in [:board cid-2 :classical] {:player (:player spooky)
+                                               :turn (:turn spooky)
+                                               :speculative true
+                                               :focus true})))
+      game)
+    game))
+
+(defn speculate
+  "Given a board state and two cells, return a new game
+   state speculating a play to the given cells."
+  [game cid-1 cid-2]
+  (if (collapsing? game)
+    (speculate-collapse game cid-1 cid-2)
+    (speculate-superposition game cid-1 cid-2)))
+
+(defn uninspect
+  "Uninspect a single enganglement from an entanglement map"
+  [entanglements cid]
+  (if (get-in entanglements [cid :speculative])
+    (dissoc entanglements cid)
+    (if (get entanglements cid)
+      (assoc-in entanglements [cid :focus] false)
+      entanglements)))
+
+(defn unspeculate-superposition
+  "Remove speculative marks"
+  [game cid-1 cid-2]
+  (-> game
+    (update-in [:board cid-1 :entanglements] #(uninspect % cid-2))
+    (update-in [:board cid-2 :entanglements] #(uninspect % cid-1))))
+
+
+(defn unspeculate-collapse
+  "Remove speculative marks"
+  [game cid-1 cid-2]
+  (reduce (fn [game cell]
+            (update-in game [:board cell] #(if (-> % :classical :speculative)
+                                            (dissoc % :classical)
+                                            %)))
+    (-> game
+      (update-in [:board cid-1 :entanglements] #(uninspect % cid-2))
+      (update-in [:board cid-2 :entanglements] #(uninspect % cid-1)))
+    (all-entanglements game #{cid-1})))
+
 (defn unspeculate
   "Given a game and two cells, remove speculative entanglements
    and/or focus from both cells, returning a new game."
   [game cid-1 cid-2]
-  (let [uninspect* (fn [entanglements cid]
-                     (if (get-in entanglements [cid :speculative])
-                       (dissoc entanglements cid)
-                       (if (get entanglements cid)
-                         (assoc-in entanglements [cid :focus] false)
-                         entanglements)))]
-    (-> game
-          (update-in [:board cid-1 :entanglements] #(uninspect* % cid-2))
-          (update-in [:board cid-2 :entanglements] #(uninspect* % cid-1)))))
-
-
+  (if (collapsing? game)
+    (unspeculate-collapse game cid-1 cid-2)
+    (unspeculate-superposition game cid-1 cid-2)))
 
 
 (def new-game

@@ -66,11 +66,12 @@
 (defn classical
   "Om component for a classical cell"
   [cell owner]
+  (println "rendering classical:" cell)
   (reify
     om/IRender
     (render [this]
       (dom/td #js {:className "classical"}
-        (mark cell)))))
+        (mark (:classical cell))))))
 
 (defn cell
   "Om component for a square"
