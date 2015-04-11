@@ -1,9 +1,7 @@
-(ns qttt.om
+(ns qttt.ui.om
   (:require [om.core :as om]
             [om.dom :as dom]
             [qttt.game :as game]))
-
-(enable-console-print!)
 
 (def css-transition-group (js/React.createFactory js/React.addons.CSSTransitionGroup))
 
