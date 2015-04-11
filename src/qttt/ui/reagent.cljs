@@ -32,7 +32,7 @@
         :on-mouse-leave (fn [evt]
                           (swap! game #(game/unspeculate % cell-idx e-idx)))}
    (css-transition-group #js {:transitionName "mark-transition"}
-      (when-not (empty? e)  (mark e)))])
+       (when-not (empty? e) (r/as-element (mark e))))])
 
 (defn superposition
   [cell cell-idx]
