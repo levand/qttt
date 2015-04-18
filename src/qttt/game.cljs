@@ -7,7 +7,6 @@
 
 (def ^:dynamic *speculative* false)
 
-;; TODO: make cycles of size 2 work (approach: become aware of the turn they were played on)
 ;; TODO: make hover highlighting work (approach: third top-level activity)
 ;; TODO: make cycle collapse work
 
@@ -28,11 +27,11 @@
    ;; A cell
   {:entanglements {0 {:player 0
                       :turn 0
-                      :pair 1
+                      :pair [4 2]
                       :focus false
                       :collapsing true}
                    1 {:player 1
-                      :pair 2
+                      :pair [4 2]
                       :turn 1
                       :focus true}}
    :classical {:player 0
@@ -53,9 +52,9 @@
   [game cell]
   (->> (get-in game [:board cell :entanglements])
     (vals)
-    (keep (fn [e] (when (and (:pair e)
-                         (not (get-in game [:board (:pair e) :classical])))
-                   [(:pair e) (:turn e)])))))
+    (keep (fn [e] (when-let [[pair-cell pair-subcell] (:pair e)]
+                    (when-not (get-in game [:board pair-cell :classical])
+                      [pair-cell (:turn e)]))))))
 
 (defn index-of
   "Return the index of an item in a vector, if present. If not present return nil"
@@ -93,7 +92,7 @@
         (reduce (fn [g cell]
                   (let [collapsing-subcells
                         (keep
-                          (fn [[sub e]] (when (contains? collapsing-cells (:pair e)) sub))
+                          (fn [[sub e]] (when (contains? collapsing-cells (first (:pair e))) sub))
                           (get-in g [:board cell :entanglements]))]
                     (reduce #(assoc-in %1 [:board cell :entanglements %2 :collapsing] true) g collapsing-subcells)))
           (assoc game :collapsing true)
@@ -116,12 +115,12 @@
       (assoc-in [:board cell :entanglements subcell]
         {:player (:player game)
          :turn (:turn game)
-         :pair pair-cell
+         :pair [pair-cell pair-subcell]
          :focus *speculative*})
       ;; update the entangled spooky mark
       (update-in [:board pair-cell :entanglements pair-subcell] assoc
         :focus *speculative*
-        :pair cell)
+        :pair [cell subcell])
       ;; remove the pair tracker
       (dissoc :pair)
       ;; change the player
@@ -151,13 +150,24 @@
            :turn (:turn game)
            :focus true})))))
 
+(defn highlight
+  "Focus the subcell and its entanglement"
+  [game cell subcell]
+  (-> (if-let [[pair-cell pair-subcell]
+               (get-in game [:board cell :entanglements subcell :pair])]
+        (assoc-in game [:board pair-cell :entanglements pair-subcell :focus] true)
+        game)
+    (assoc-in [:board cell :entanglements subcell :focus] true)))
+
 (defn play
   "Play an action at the given cell and subcell.
    What the action is depends on the game context."
   [game cell subcell]
   (if (:collapsing game)
     (resolve-collapse game cell subcell)
-    (spooky-mark game cell subcell)))
+    (if (and *speculative* (get-in game [:board cell :entanglements subcell]))
+      (highlight game cell subcell)
+      (spooky-mark game cell subcell))))
 
 (defn speculate
   "Make a play, but store the previous game state so the 'play' can be easily reverted"
