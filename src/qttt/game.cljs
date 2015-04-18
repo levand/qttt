@@ -5,6 +5,8 @@
 (def num-cells 9)
 (def num-players 2)
 
+(def ^:dynamic *speculative* false)
+
 (comment
   ;; Game Data Structures
 
@@ -40,7 +42,9 @@
 (defn legal-spooky-mark?
   "Return true if a spooky mark can be placed on the given cell and subcell"
   [game cell subcell]
-  (nil? (get-in game [:board cell :entanglements subcell])))
+  (and
+    (not= cell (first (:pair game)))
+    (nil? (get-in game [:board cell :entanglements subcell]))))
 
 (defn check-collapses
   "Given a game, check if there are any collapses happening
@@ -59,10 +63,10 @@
         {:player (:player game)
          :turn (:turn game)
          :target pair-cell
-         :focus false})
+         :focus *speculative*})
       ;; update the entangled spooky mark
       (update-in [:board pair-cell :entanglements pair-subcell] assoc
-        :focus false
+        :focus *speculative*
         :target cell)
       ;; remove the pair tracker
       (dissoc :pair)
@@ -103,9 +107,10 @@
 (defn speculate
   "Make a play, but store the previous game state so the 'play' can be easily reverted"
   [game cell subcell]
-  (-> game
-    (play cell subcell)
-    (assoc :base game)))
+  (binding [*speculative* true]
+    (-> game
+      (play cell subcell)
+      (assoc :base game))))
 
 (defn unspeculate
   "Restore the previous game state (if there was one)."
