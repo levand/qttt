@@ -85,7 +85,9 @@
         (apply dom/table #js {:className "board"}
           (map (fn [row]
                  (apply dom/tr nil
-                   (map (fn [idx] (om/build cell (get cells idx))) row)))
+                   (map (fn [idx]
+                          (om/build cell
+                            (get cells idx))) row)))
             (partition 3 (range 9))))))))
 
 (defn screen [game owner]
