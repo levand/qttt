@@ -64,7 +64,10 @@
            v)))
 
 (defn cycle-search
-  "Return a seq of cell cycles discovered"
+  "Return a seq of cell cycles discovered.
+
+   Tracks the turn of the entanglement just
+   followed, to avoid backtracking immediately."
   [game cell visited from-turn]
   (set (mapcat (fn [[edge turn]]
                  (when-not (= turn from-turn)
