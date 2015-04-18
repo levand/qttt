@@ -31,13 +31,13 @@
       (render [this]
         (dom/td #js {:className (class-name (if (empty? e) "empty-mark" "spooky-mark"))
                      :onClick (fn [evt]
-                                (om/transact! game-cursor
+                                #_(om/transact! game-cursor
                                   #(game/play % cid-1 cid-2)))
                      :onMouseEnter (fn [evt]
-                                     (om/transact! game-cursor
+                                     #_(om/transact! game-cursor
                                        #(game/speculate % cid-1 cid-2)))
                      :onMouseLeave (fn [evt]
-                                     (om/transact! game-cursor
+                                     #_(om/transact! game-cursor
                                        #(game/unspeculate % cid-1 cid-2)))}
           (css-transition-group #js {:transitionName "mark-transition"}
             (when-not (empty? e) (mark e))))))))

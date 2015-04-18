@@ -22,14 +22,14 @@
 
 (q/defcomponent Entanglement
   [e game-atom]
-  (let [[_ cid-1 _ cid-2] (c/context e)]
+  (let [[_ cell _ subcell] (c/context e)]
     (d/td {:className (if (empty? e) "empty-mark" "spooky-mark")
            :onClick (fn [evt]
-                      (swap! game-atom #(game/play % cid-1 cid-2)))
+                      (swap! game-atom #(game/play (game/unspeculate %) cell subcell)))
            :onMouseEnter (fn [evt]
-                           (swap! game-atom #(game/speculate % cid-1 cid-2)))
+                           (swap! game-atom #(game/speculate % cell subcell)))
            :onMouseLeave (fn [evt]
-                           (swap! game-atom #(game/unspeculate % cid-1 cid-2)))}
+                           (swap! game-atom #(game/unspeculate %)))}
           (q/CSSTransitionGroup {:transitionName "mark-transition"}
                                 (when-not (empty? e) (mark e))))))
 

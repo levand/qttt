@@ -26,11 +26,11 @@
   [e cell-idx e-idx]
   [:td {:class (if (empty? e) "empty-mark" "spooky-mark")
         :on-click (fn [evt]
-                    (swap! game #(game/play % cell-idx e-idx)))
+                    #_(swap! game #(game/play % cell-idx e-idx)))
         :on-mouse-enter (fn [evt]
-                          (swap! game #(game/speculate % cell-idx e-idx)))
+                          #_(swap! game #(game/speculate % cell-idx e-idx)))
         :on-mouse-leave (fn [evt]
-                          (swap! game #(game/unspeculate % cell-idx e-idx)))}
+                          #_(swap! game #(game/unspeculate % cell-idx e-idx)))}
    (css-transition-group #js {:transitionName "mark-transition"}
        (when-not (empty? e) (r/as-element (mark e))))])
 
