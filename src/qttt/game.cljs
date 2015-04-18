@@ -7,8 +7,8 @@
 
 (def ^:dynamic *speculative* false)
 
-;; TODO: make cycles of size 2 work
-;; TODO: make hover highlighting work (third top-level activity)
+;; TODO: make cycles of size 2 work (approach: become aware of the turn they were played on)
+;; TODO: make hover highlighting work (approach: third top-level activity)
 ;; TODO: make cycle collapse work
 
 (comment
@@ -44,12 +44,18 @@
   (mod (inc player) num-players))
 
 (defn get-entanglements
-  "Return a set of cells entangled with the given cell"
+  "Return information regarding cells entangled with the given cell.
+
+   Return value is a seq of [cell turn] tuples, where turn
+   is the turn the spooky mark was placed. Also exclude
+   entanglements which have a classical value already."
+
   [game cell]
   (->> (get-in game [:board cell :entanglements])
     (vals)
-    (keep :pair)
-    (filter (fn [pair] (not (get-in game [:board pair :classical]))))))
+    (keep (fn [e] (when (and (:pair e)
+                         (not (get-in game [:board (:pair e) :classical])))
+                   [(:pair e) (:turn e)])))))
 
 (defn index-of
   "Return the index of an item in a vector, if present. If not present return nil"
@@ -59,25 +65,22 @@
            v)))
 
 (defn cycle-search
-  "Generic depth-first search, tracking visited nodes.
-
-   Return a seq of cycles discovered."
-  [node edges visited prev]
-  (set (mapcat (fn [edge]
-                 (if-let [idx (index-of visited edge)]
-                   [(set (conj (subvec visited idx) node))]
-                   (cycle-search edge edges (conj visited node) node)))
-         (disj (set (edges node)) prev))))
+  "Return a seq of cell cycles discovered"
+  [game cell visited from-turn]
+  (set (mapcat (fn [[edge turn]]
+                 (when-not (= turn from-turn)
+                   (if-let [idx (index-of visited edge)]
+                     [(set (conj (subvec visited idx) cell))]
+                     (cycle-search game edge (conj visited cell) turn))))
+         (get-entanglements game cell))))
 
 (defn detect-cycles
   "Return a sequence of all entanglement cycles present in the given board"
   [game]
-  (let [edges (fn [cell-id]
-                (get-entanglements game cell-id))]
-    ;; Not 100% efficient, but we need some way of detecting multiple disjoint graphs.
-    ;; Should be fine for small N. Using sets removes redundancies. If we run into perf
-    ;; trouble we can track which nodes we've visited *at all* and never revisit them.
-    (apply set/union (map #(cycle-search % edges [] nil) (keys (:board game))))))
+  ;; Not 100% efficient, but we need some way of detecting multiple disjoint graphs.
+  ;; Should be fine for small N. Using sets removes redundancies. If we run into perf
+  ;; trouble we can track which nodes we've visited *at all* and never revisit them.
+  (apply set/union (map #(cycle-search game % [] -1) (keys (:board game)))))
 
 (defn check-collapses
   "Given a game, check if there are any collapses happening
