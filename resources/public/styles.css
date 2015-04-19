@@ -7,6 +7,15 @@ body {
   font-family: "Lucida Console", Monaco, monospace;
 }
 
+.instructions {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  font-size: 130%;
+  margin-bottom: 10px;
+  color: #6DA6D2;
+}
+
 .repo-link {
  margin-left: auto;
  margin-right: auto;

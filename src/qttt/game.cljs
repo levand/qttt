@@ -223,6 +223,16 @@
   [game]
   (if (:base game) (:base game) game))
 
+(defn instructions
+  "Return a tuple of [player phase] to use for printing out game instructions"
+  [game]
+  (let [game (if (:base game) (:base game) game)
+        phase (cond
+                (:collapsing game) "make an observation!!"
+                (:pair game) "create a superposition"
+                :else "place a mark")]
+    [(:player game) phase]))
+
 (def new-game
   {:turn 0
    :player 0

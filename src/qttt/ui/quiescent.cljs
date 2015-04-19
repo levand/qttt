@@ -56,20 +56,31 @@
     (classical cell game-atom)
     (superposition cell game-atom)))
 
+(q/defcomponent Instructions
+  [game]
+  (let [[player phase] (game/instructions game)
+        player-classes (if (zero? player)
+                         ["player-x" "fa-plus"]
+                         ["player-o" "fa-circle-o"])]
+    (d/div {:className "instructions"}
+        (d/span {:className (apply class-name "mark" "fa" player-classes)})
+        (str "'s turn: " phase))))
+
 (q/defcomponent Board
-  [cells game-atom]
+  [game game-atom]
   (d/div {:className "board-container"}
-         (apply d/table {:className "board"}
-                (for [row (partition 3 (range 9))]
-                  (apply d/tr {}
-                         (for [idx row] (Cell (get cells idx) game-atom)))))
+    (Instructions game)
+    (apply d/table {:className "board"}
+      (for [row (partition 3 (range 9))]
+        (apply d/tr {}
+          (for [idx row] (Cell (get-in game [:board idx]) game-atom)))))
     (d/div {:className "repo-link"}
           (d/a {:href "http://github.com/levand/qttt"} "http://github.com/levand/qttt"))))
 
 (q/defcomponent Screen
   [game game-atom]
   (d/div {:className "play-area"}
-    (Board (:board (c/contextualize game)) game-atom)))
+    (Board (c/contextualize game) game-atom)))
 
 (defn render-loop
   "Render the main application. Called every frame."

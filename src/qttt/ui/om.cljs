@@ -1,6 +1,6 @@
 (ns qttt.ui.om
   (:require [om.core :as om]
-            [om.dom :as dom]
+            [om.dom :as d]
             [qttt.game :as game]))
 
 (def css-transition-group (js/React.createFactory js/React.addons.CSSTransitionGroup))
@@ -15,11 +15,11 @@
   [{:keys [player turn focus collapsing]}]
   (let [icon (if (= 0 player) "fa-plus" "fa-circle-o")
         player-class (if (= 0 player) "player-x" "player-o")]
-    (dom/span #js {:key (str player)
+    (d/span #js {:key (str player)
                    :className (class-name "mark" player-class (when focus "highlight")
                                 (when collapsing "shake") (when collapsing "shake-constant"))}
-      (dom/span #js {:className (class-name "fa" icon)})
-      (dom/span #js {:className "turn"} turn))))
+      (d/span #js {:className (class-name "fa" icon)})
+      (d/span #js {:className "turn"} turn))))
 
 (defn entanglement
   "Om component for an individual entanglement"
@@ -29,7 +29,7 @@
     (reify
       om/IRender
       (render [this]
-        (dom/td #js {:className (class-name (if (empty? e) "empty-mark" "spooky-mark"))
+        (d/td #js {:className (class-name (if (empty? e) "empty-mark" "spooky-mark"))
                      :onClick (fn [evt]
                                 (om/transact! game-cursor
                                   #(game/play (game/unspeculate %) cell subcell)))
@@ -47,10 +47,10 @@
   (reify
     om/IRender
     (render [this]
-      (dom/td #js {:className (class-name "superposition")}
-        (apply dom/table nil
+      (d/td #js {:className (class-name "superposition")}
+        (apply d/table nil
           (map (fn [row]
-                 (apply dom/tr nil
+                 (apply d/tr nil
                    (map (fn [idx]
                           ;; Make sure were have a valid cursor
                           (let [e (get-in cell [:entanglements idx]
@@ -66,7 +66,7 @@
   (reify
     om/IRender
     (render [this]
-      (dom/td #js {:className "classical"}
+      (d/td #js {:className "classical"}
         (mark (:classical cell))))))
 
 (defn cell
@@ -76,28 +76,41 @@
     (classical cell owner)
     (superposition cell owner)))
 
-(defn board [cells owner]
+(defn instructions [game owner]
   (reify
     om/IRender
     (render [this]
-      (dom/div #js {:className "board-container"}
-        (apply dom/table #js {:className "board"}
+      (let [[player phase] (game/instructions game)
+            player-classes (if (zero? player)
+                             ["player-x" "fa-plus"]
+                             ["player-o" "fa-circle-o"])]
+        (d/div #js {:className "instructions"}
+          (d/span #js {:className (apply class-name "mark" "fa" player-classes)})
+          (str "'s turn: " phase))))))
+
+(defn board [game owner]
+  (reify
+    om/IRender
+    (render [this]
+      (d/div #js {:className "board-container"}
+        (om/build instructions game)
+        (apply d/table #js {:className "board"}
           (map (fn [row]
-                 (apply dom/tr nil
+                 (apply d/tr nil
                    (map (fn [idx]
                           (om/build cell
-                            (get cells idx))) row)))
+                            (get-in game [:board idx]))) row)))
             (partition 3 (range 9))))
-        (dom/div #js {:className "repo-link"}
-          (dom/a #js {:href "http://github.com/levand/qttt"}
+        (d/div #js {:className "repo-link"}
+          (d/a #js {:href "http://github.com/levand/qttt"}
             "http://github.com/levand/qttt"))))))
 
 (defn screen [game owner]
   (reify
       om/IRender
       (render [this]
-        (dom/div #js {:className "play-area"}
-          (om/build board (:board game))))))
+        (d/div #js {:className "play-area"}
+          (om/build board game)))))
 
 
 (defn ^:export main

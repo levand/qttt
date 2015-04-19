@@ -54,17 +54,27 @@
     ^{:key cell-idx} [classical cell cell-idx]
     ^{:key cell-idx} [superposition cell cell-idx]))
 
-(defn board [cells]
+(defn instructions [game]
+  (let [[player phase] (game/instructions game)
+        player-classes (if (zero? player)
+                         ["player-x" "fa-plus"]
+                         ["player-o" "fa-circle-o"])]
+    [:div.instructions
+     [:span {:class (apply class-name "mark" "fa" player-classes)}]
+     (str "'s turn: " phase)]))
+
+(defn board [game]
   [:div.board-container
+   [instructions game]
    [:table.board (for [row (partition 3 (range 9))]
                    ^{:key (str row)}
                    [:tr (for [idx row]
-                          (cell (get cells idx) idx))])]
+                          (cell (get-in game [:board idx]) idx))])]
    [:div.repo-link
     [:a {:href "http://github.com/levand/qttt"} "http://github.com/levand/qttt"]]])
 
 (defn screen []
-  [:div.play-area [board (:board @game)]])
+  [:div.play-area [board @game]])
 
 (defn ^:export main
   []
