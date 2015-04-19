@@ -145,9 +145,9 @@
   Given an observation, return a set of observations implied based
   on the accepted cell's entanglements."
   [game [accepted-cell accepted-subcell]]
-  (map :pair
-    (vals (dissoc (get-in game [:board accepted-cell :entanglements])
-            accepted-subcell))))
+  (set (map :pair
+         (vals (dissoc (get-in game [:board accepted-cell :entanglements])
+                 accepted-subcell)))))
 
 (defn observe-all
   "Given a set of observations, recursively calculate *all* observations inferred from entangled cells"
