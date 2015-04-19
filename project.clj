@@ -6,7 +6,7 @@
                  [org.omcljs/om "0.8.8":exclusions [cljsjs/react]]
                  [cljsjs/react-with-addons "0.12.2-7"]
                  [quiescent "0.2.0-alpha1"]
-                 [com.cognitect/contextual "0.1.0-SNAPSHOT"]]
+                 [com.cognitect/contextual "0.1.0"]]
   :plugins [[lein-cljsbuild "1.0.5"]]
   :clean-targets ^{:protect false} [:target-path :compile-path "resources/public/gen"]
   :cljsbuild {:builds {:dev {:source-paths ["src"]
