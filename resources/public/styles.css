@@ -7,6 +7,19 @@ body {
   font-family: "Lucida Console", Monaco, monospace;
 }
 
+.repo-link {
+ margin-left: auto;
+ margin-right: auto;
+ width: 500px;
+ text-align: center;
+ font-size: 150%;
+ margin-top: 20px;
+}
+
+a , a.visited{
+  color: #6DA6D2;
+}
+
 .board-container {
   margin: 50px;
 }

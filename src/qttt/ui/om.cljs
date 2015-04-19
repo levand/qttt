@@ -87,7 +87,10 @@
                    (map (fn [idx]
                           (om/build cell
                             (get cells idx))) row)))
-            (partition 3 (range 9))))))))
+            (partition 3 (range 9))))
+        (dom/div #js {:className "repo-link"}
+          (dom/a #js {:href "http://github.com/levand/qttt"}
+            "http://github.com/levand/qttt"))))))
 
 (defn screen [game owner]
   (reify

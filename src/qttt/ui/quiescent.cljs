@@ -62,12 +62,14 @@
          (apply d/table {:className "board"}
                 (for [row (partition 3 (range 9))]
                   (apply d/tr {}
-                         (for [idx row] (Cell (get cells idx) game-atom)))))))
+                         (for [idx row] (Cell (get cells idx) game-atom)))))
+    (d/div {:className "repo-link"}
+          (d/a {:href "http://github.com/levand/qttt"} "http://github.com/levand/qttt"))))
 
 (q/defcomponent Screen
   [game game-atom]
   (d/div {:className "play-area"}
-         (Board (:board (c/contextualize game)) game-atom)))
+    (Board (:board (c/contextualize game)) game-atom)))
 
 (defn render-loop
   "Render the main application. Called every frame."

@@ -59,8 +59,9 @@
    [:table.board (for [row (partition 3 (range 9))]
                    ^{:key (str row)}
                    [:tr (for [idx row]
-                          (cell (get cells idx) idx))])]])
-
+                          (cell (get cells idx) idx))])]
+   [:div.repo-link
+    [:a {:href "http://github.com/levand/qttt"} "http://github.com/levand/qttt"]]])
 
 (defn screen []
   [:div.play-area [board (:board @game)]])
