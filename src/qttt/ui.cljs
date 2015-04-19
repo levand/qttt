@@ -13,6 +13,6 @@
       :om (om/main)
       :reagent (reagent/main)
       :quiescent (quiescent/main)
-      (js/alert "Please use the query string to set 'lib' to om, reagent or quiescent."))))
+      (js/alert "Please use the query string to set 'lib' to om, reagent or quiescent. For example, 'dev.html?lib=om'"))))
 
 
