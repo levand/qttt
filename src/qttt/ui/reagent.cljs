@@ -23,14 +23,14 @@
      [:span.turn turn]]))
 
 (defn entanglement
-  [e cell-idx e-idx]
+  [e cell subcell]
   [:td {:class (if (empty? e) "empty-mark" "spooky-mark")
         :on-click (fn [evt]
-                    #_(swap! game #(game/play % cell-idx e-idx)))
+                    (swap! game #(game/play (game/unspeculate %) cell subcell)))
         :on-mouse-enter (fn [evt]
-                          #_(swap! game #(game/speculate % cell-idx e-idx)))
+                          (swap! game #(game/speculate % cell subcell)))
         :on-mouse-leave (fn [evt]
-                          #_(swap! game #(game/unspeculate % cell-idx e-idx)))}
+                          (swap! game game/unspeculate))}
    (css-transition-group #js {:transitionName "mark-transition"}
        (when-not (empty? e) (r/as-element (mark e))))])
 

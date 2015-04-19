@@ -24,21 +24,20 @@
 (defn entanglement
   "Om component for an individual entanglement"
   [e owner]
-  (let [[_ cid-1 _ cid-2] (om/path e)
+  (let [[_ cell _ subcell] (om/path e)
         game-cursor (om/root-cursor (om/state e))]
     (reify
       om/IRender
       (render [this]
         (dom/td #js {:className (class-name (if (empty? e) "empty-mark" "spooky-mark"))
                      :onClick (fn [evt]
-                                #_(om/transact! game-cursor
-                                  #(game/play % cid-1 cid-2)))
+                                (om/transact! game-cursor
+                                  #(game/play (game/unspeculate %) cell subcell)))
                      :onMouseEnter (fn [evt]
-                                     #_(om/transact! game-cursor
-                                       #(game/speculate % cid-1 cid-2)))
+                                     (om/transact! game-cursor
+                                       #(game/speculate % cell subcell)))
                      :onMouseLeave (fn [evt]
-                                     #_(om/transact! game-cursor
-                                       #(game/unspeculate % cid-1 cid-2)))}
+                                     (om/transact! game-cursor game/unspeculate))}
           (css-transition-group #js {:transitionName "mark-transition"}
             (when-not (empty? e) (mark e))))))))
 
