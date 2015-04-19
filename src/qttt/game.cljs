@@ -7,9 +7,6 @@
 
 (def ^:dynamic *speculative* false)
 
-;; TODO: make hover highlighting work (approach: third top-level activity)
-;; TODO: make cycle collapse work
-
 (comment
   ;; Game Data Structures
 
@@ -46,7 +43,7 @@
   "Return information regarding cells entangled with the given cell.
 
    Return value is a seq of [cell turn] tuples, where turn
-   is the turn the spooky mark was placed. Also exclude
+   is the turn the spooky mark was placed. Exclude
    entanglements which have a classical value already."
 
   [game cell]
@@ -133,11 +130,52 @@
       ;; check for collapses
       (check-collapses))))
 
+(defn valid-collapse?
+  "Return true if the given cell and subcell represent
+   a valid choice to collapse"
+  [game cell subcell]
+  (get-in game [:board cell :entanglements subcell :collapsing]))
+
+
+;; will this work with the new data model? Or need refactoring?
+(defn observe
+  "Define an observation as a tuple of [accepted-cell accepted-subcell],
+   where the accepted subcell is that which will be observed and become classical.
+
+  Given an observation, return a set of observations implied based
+  on the accepted cell's entanglements."
+  [game [accepted-cell accepted-subcell]]
+  (map :pair
+    (vals (dissoc (get-in game [:board accepted-cell :entanglements])
+            accepted-subcell))))
+
+(defn observe-all
+  "Given a set of observations, recursively calculate *all* observations inferred from entangled cells"
+  [game observations]
+  (loop [os observations]
+    (let [next-os (apply set/union os (map #(observe game %) os))]
+      (if (= next-os os)
+        next-os
+        (recur next-os)))))
+
 (defn resolve-collapse
   "Given a cell and subcell, resolve any collapse present in the game"
   [game cell subcell]
-  (println "resolving collapse")
-  game)
+  (if-not (valid-collapse? game cell subcell)
+    game
+    (let [observations (observe-all game #{[cell subcell]})
+          observations (if *speculative* (disj observations [cell subcell])
+                                         observations)]
+      (reduce (fn [game [cell subcell]]
+                (let [e (get-in game [:board cell :entanglements subcell])]
+                  (assoc-in game [:board cell :classical]
+                    {:player (:player e)
+                     :turn (:turn e)
+                     :focus *speculative*})))
+        (if *speculative*
+          (assoc-in game [:board cell :entanglements subcell :focus] true)
+          (assoc game :collapsing false))
+        observations))))
 
 (defn spooky-mark
   "Place a spooky mark at the given cell and subcell"
