@@ -15,6 +15,10 @@ three front-ends written using different UI libraries:
 
 ## Running the Program
 
+Note: QTTT depends on a library, `com.cognitect/contextual` that may not yet
+be in public repositories. If not, you can install the dependency locally by cloning
+`https://github.com/cognitect-labs/contextual.git` and running `lein install` in that repository.
+
 First, compile the ClojureScript:
 
 `lein cljsbuild`
