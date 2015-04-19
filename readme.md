@@ -24,9 +24,9 @@ Then, visit the HTML page at `resources/public/dev.html`.
 You will need to select which UI library to view by passing a `lib`
 URL parameter. For example:
 
-`dev.html?lib=om`
-`dev.html?lib=reagent`
-`dev.html?lib=quiescent`
+- `dev.html?lib=om`
+- `dev.html?lib=reagent`
+- `dev.html?lib=quiescent`
 
 Play proceeds in turns. There is no win condition detection, yet, but
 all the other rules of the game are in place.
