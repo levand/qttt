@@ -2,7 +2,7 @@
 
 For rules on the game itself, see the
 [Wikipedia article](http://en.wikipedia.org/wiki/Quantum_tic-tac-toe)
-or the orignal
+or the original
 [paper](http://qttt.googlecode.com/files/QT3-AJP%2010-20-06.pdf)
 published in the American Journal of Physics.
 
