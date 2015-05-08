@@ -1,6 +1,6 @@
 (defproject qttt "0.1.0-SNAPSHOT"
   :description "Quantum Tic Tac Toe"
-  :dependencies [[org.clojure/clojure "1.7.0-beta1"]
+  :dependencies [[org.clojure/clojure "1.7.0-beta2"]
                  [org.clojure/clojurescript "0.0-3196"]
                  [reagent "0.5.0" :exclusions [cljsjs/react]]
                  [org.omcljs/om "0.8.8":exclusions [cljsjs/react]]
